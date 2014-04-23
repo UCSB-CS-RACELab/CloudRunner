@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Select Job Type{% endblock %}
+{% block csscontent %}<link href="/static/css/input_job_parameters.css" rel="stylesheet">{% endblock %}
+
+{% block content %}
+
+<div class="col-md-7">
+  <div class="well well-large">
+    <form action="/simulate" method="post" id="job-params-form">
+      <legend>Step 3. Specify the program's parameters.</legend>
+<div class="form-group">
+<label for="model">Model File</label>
+<input name="model-fileName" type="file" id="model">
+</div>
+<div class="form-group">
+<label for="time">Time</label>
+<input name="time" class="form-control" type="text" id="time">
+</div>
+<div class="form-group">
+<label for="realizations">Realizations</label>
+<input name="realizations" class="form-control" type="text" id="realizations">
+</div>
+      
+      <a data-toggle="collapse" href="#optional-collapse-content" id="optional-collapse-link">
+        Optional Parameters <span class="glyphicon glyphicon-collapse-down"></span>
+      </a>
+      <div id="optional-collapse-content" class="collapse">
+<div class="form-group">
+<label for="intervals">Intervals</label>
+<input name="intervals" class="form-control" type="text" id="intervals">
+</div>
+<div class="form-group">
+<label for="bins">Bins</label>
+<input name="bins" class="form-control" type="text" id="bins">
+</div>
+<div class="form-group">
+<label for="species">Species</label>
+<input name="species" class="form-control" type="text" id="species">
+</div>
+<div class="form-group">
+<label for="out-dir">Out-dir</label>
+<input name="out-dir" class="form-control" type="text" id="out-dir">
+</div>
+<div class="form-group">
+<label for="seed">Seed</label>
+<input name="seed" class="form-control" type="text" id="seed">
+</div>
+<div class="form-group">
+<label for="processes">Processes</label>
+<input name="processes" class="form-control" type="text" id="processes">
+</div>
+<div class="form-group">
+<label for="epsilon">Epsilon</label>
+<input name="epsilon" class="form-control" type="text" id="epsilon">
+</div>
+<div class="form-group">
+<label for="threshold">Threshold</label>
+<input name="threshold" class="form-control" type="text" id="threshold">
+</div>
+<div class="checkbox">
+<label>
+<input name="no-stats" type="checkbox" value="True">
+No-stats
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input name="keep-trajectories" type="checkbox" value="True">
+Keep-trajectories
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input name="keep-histograms" type="checkbox" value="True">
+Keep-histograms
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input name="label" type="checkbox" value="True">
+Label
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input name="force" type="checkbox" value="True">
+Force
+</label>
+</div>
+<div class="checkbox">
+<label>
+<input name="no-recompile" type="checkbox" value="True">
+No-recompile
+</label>
+</div>
+      </div>
+      
+      <input type="hidden" name="step" value="3">
+      <input type="hidden" name="program" value="{{program_name}}">
+      <input type="hidden" name="job_name" value="{{job_name}}">
+      <input type="hidden" name="infra" value="{{infra}}">
+      
+      <div class="clearfix" id="action-buttons">
+        <div class="form-group pull-left">
+          <button type="submit" class="btn btn-primary" name="action" value="previous">
+            Previous
+          </button>
+        </div>
+        <div class="form-group pull-right">
+          <button type="submit" class="btn btn-primary" name="action" value="submit">Submit</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block jscontent %}
+<script src="/static/js/input_job_parameters.js"></script>
+{% endblock %}

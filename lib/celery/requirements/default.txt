@@ -1,0 +1,3 @@
+pytz
+billiard>=2.7.3.28
+kombu>=2.5.10

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Account Settings{% endblock %}
+{% block csscontent %}<link href="/static/css/account_settings.css" rel="stylesheet">{% endblock %}
+
+{% block content %}
+<div class="col-md-8 well">
+  <form action="/account_settings" method="post">
+    <legend id='form-heading'>Account Settings</legend>
+    <fieldset>
+      <div class="form-group">
+        <label for="name">Your Name</label>
+        <input id="name" class="form-control" type="text" name="name" value="{{name}}">
+      </div>
+      <div class="form-group">
+        <label for="email">Your Email Address</label>
+        <input id="email" class="form-control" type="email" name="email" value="{{email_address}}" disabled>
+      </div>
+      <div class="form-group">
+        <label for="password">New Password</label>
+        <input id="password" class="form-control" type="password" name="password">
+      </div>
+      <div class="form-group">
+        <label for="password_conf">New Password Confirmation</label>
+        <input id="password_conf" class="form-control" type="password" name="password_confirmation">
+      </div>
+      <div class="form-group current-pass hidden">
+        <label for="password_curr">Current Password</label>
+        <input id="password_curr" type="password" class="form-control" name="current_password">
+      </div>
+      <div class="form-group">
+        <button id="submit-btn" type="submit" class="btn btn-primary full-width">Save Changes</button>
+      </div>
+    </fieldset>
+  </form>
+</div>
+{% endblock %}
+{% block jscontent %}<script src="/static/js/account_settings.js"></script>{% endblock %}

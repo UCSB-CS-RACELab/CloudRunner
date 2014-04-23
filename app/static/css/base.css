@@ -1,0 +1,30 @@
+.full-width {
+  width: 100%;
+}
+.half-width {
+  width: 50%;
+}
+@media (min-width:1047px) {
+  .col-md-9 .half-width {
+    width: 49.6%;
+  }
+}
+@media (min-width:992px) and (max-width:1046px) {
+  .col-md-9 .half-width {
+    width: 49.5%;
+  }
+}
+@media (min-width:597px) and (max-width:991px) {
+  .col-md-9 .half-width {
+    width: 49.6%;
+  }
+}
+@media (max-width:596px) {
+  .col-md-9 .half-width {
+    width: 49.3%;
+  }
+}
+
+.success-banner, .error-banner {
+  margin: 0 1em 1em;
+}

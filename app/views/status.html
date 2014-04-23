@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Job Status{% endblock %}
+{% block csscontent %}<link href="/static/css/status.css" rel="stylesheet">{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb">
+  <li class="active">All Jobs</li>
+</ol>
+{% endblock %}
+
+
+{% block content %}
+<!-- Script to check/unckeck all checkboxes -->
+<script language="JavaScript">
+function toggle(source) {
+  checkboxes = document.getElementsByName('select_job');
+  for(var i=0, n=checkboxes.length;i<n;i++) {
+    checkboxes[i].checked = source.checked;
+  }
+}
+</script>
+
+<div class="col-md-7 well">
+{% if local_jobs %}
+  <form role="form" action="/status" method="post">
+    <legend>
+      <a data-toggle="modal" class="show" href="#help_modal1">
+        Job Status <span class="glyphicon glyphicon-info-sign"></span>
+      </a>
+      {% set help_modal_id = "help_modal1" %}
+      {% set help_modal_title = "Status" %}
+      {% set help_modal_message = "A local job can have status 'Running', 'Finished' or 'Failed'. A Cloud job can in addition have status 'Pending'. A pending job is one that has not yet been assigned a compute node by the task queue system. This can be either because all nodes are busy, or because no nodes have been launched yet. In the latter case, launching nodes will cause the job to start running." %}
+      {% include "help_modal.html" %}
+      {{help_modal|safe}}
+    </legend>
+    <table class="table table-bordered" id="dataTable">
+      <thead>
+        <tr>
+          <th><input type="checkbox" onClick="toggle(this)"/></th>
+          <th>Job Name</th>
+          <th>Job Type</th>
+          <th>Status</th>
+          <th>Infrastructure</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for job in local_jobs %}
+        {% if job.status == "Pending" %}
+        <tr class="warning">
+        {% elif job.status == "Running" %}
+        <tr class="info">
+        {% elif job.status == "Finished" %}
+        <tr class="success">
+        {% elif job.status == "Failed" %}
+        <tr class="danger">
+        {% endif %}
+          <td><input type="checkbox" name="select_job" value="{{job.name}}"> </td>
+          <td>{{job.name}}</td>
+          <td>{{job.type}}</td>
+          <td>{{job.status}}</td>
+          <td>{{job.infrastructure}}</td>
+          <td>
+          {% if job.status == "Finished" %}
+            <a href="/status/{{job.name}}">View Results</a>
+          {% elif job.status == "Failed" %}
+            <a href="/status/{{job.name}}?debug=True">Get Debugging Info</a>
+          {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary btn-large" name="action" value="delete">
+      <span class="glyphicon glyphicon-trash"></span> Delete Selected
+    </button>
+    <button type="submit" class="btn btn-primary btn-large" name="action" value="refresh">
+      <span class="glyphicon glyphicon-refresh"></span> Refresh
+    </button>
+  </form>
+{% else %}
+<h2>There are no Jobs present in the system.</h2>
+{% endif %}
+            
+</div>
+{% endblock %}

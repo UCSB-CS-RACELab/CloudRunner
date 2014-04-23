@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Job Status{% endblock %}
+{% block csscontent %}<link href="/static/css/job_status.css" rel="stylesheet">{% endblock %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb">
+  <li><a href="/status">All Jobs</a></li>
+  <li class="active">Job Status</li>
+</ol>
+{% endblock %}
+
+{% block content %}
+<div class="col-md-7">
+  <h3>
+    Job Summary: <span class="text-info">{{job.name}}</span>
+  </h3>
+  <div class="well well-sm">
+    <h4 class="metadata-title">Metadata</h4>
+    <dl class="dl-horizontal">
+      <dt>Job type</dt>
+      <dd>{{job.job_type}}</dd>
+      <dt>Output location</dt>
+      <dd>{{job.output_location}}</dd>
+    </dl>
+  </div>
+  <div class="well well-sm">
+    <form id="output-form" role="form" action="/status/{{job.name}}" method="post">
+      <legend>Job Output</legend>
+    {% if should_pull_remote %}
+      <button type="submit" name="action" value="pull_remote" class="btn btn-primary">
+        Download remote data
+      </button>
+    {% else %}
+      <input id="local-file-path" type="hidden" name="output_path" value="{{job.output_location}}">
+      <button type="submit" class="btn btn-primary local-file" data-loading-text="Gathering output data...">
+        Access local data
+      </button>
+    {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block jscontent %}
+<script src="/static/js/job_status.js"></script>
+{% endblock %}

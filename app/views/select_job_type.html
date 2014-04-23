@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Select Job Type{% endblock %}
+
+{% block content %}
+
+<div class="col-md-7">
+  <div class="well well-large">
+    <form action="/simulate" method="post">
+      <legend>Step 1. Select the program you wish to run.</legend>
+      <div class="form-group">
+        {% for program_name in programs %}
+        <div class="radio">
+          <label>
+            <input type="radio" name="program" id="radio-{{loop.index}}" value="{{program_name}}">
+            {{ program_name }}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <input type="hidden" name="step" value="1">
+      
+      <div class="clearfix">
+        <div class="form-group pull-right">
+          <button type="submit" class="btn btn-primary" name="action" value="next">Next</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

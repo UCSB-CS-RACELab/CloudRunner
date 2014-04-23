@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Select Infrastructure{% endblock %}
+
+{% block content %}
+
+<div class="col-md-7">
+  <div class="well well-large">
+    <form action="/simulate" method="post">
+      <legend>Step 2. Specify the job parameters.</legend>
+      <div class="form-group">
+        <label for="job-name-input">Job Name</label>
+        <input name="job_name" class="form-control" type="text" id="job-name-input" value="{{job_name}}">
+        <span class="help-block">Every job needs a unique name within the system.</span>
+      </div>
+      <div class="form-group">
+        <label for="infra-select">Infrastructure</label>
+        <select class="form-control" id="infra-select" name="infrastructure" value="{{infra}}">
+          {% for inf_name in infrastructures %}
+          <option>{{inf_name}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <input type="hidden" name="step" value="2">
+      <input type="hidden" name="program" value="{{program_name}}">
+      
+      <div class="clearfix">
+        <div class="form-group pull-left">
+          <button type="submit" class="btn btn-primary" name="action" value="previous">
+            Previous
+          </button>
+        </div>
+        <div class="form-group pull-right">
+          <button type="submit" class="btn btn-primary" name="action" value="next">Next</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

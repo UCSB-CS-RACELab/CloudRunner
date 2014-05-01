@@ -100,7 +100,7 @@ class CloudManager(object):
         if True or params[self.PARAM_BLOCKING]:
             # Synchronous so just call the method directly
             params["image_id"] = self.__get_image_id(infrastructure)
-            params["instance_type"] = "m1.small" #"t1.micro"
+            params["instance_type"] = "t1.micro"
             params["use_spot_instances"] = False
             instance_ids, public_ips, private_ips = agent.run_instances(
                 int(params[self.PARAM_NUM_VMS]),
@@ -136,9 +136,17 @@ class CloudManager(object):
             params[self.PARAM_REGION] = CRConfigFile.get_default_region_for_infrastructure(infrastructure)
         # Check for key prefix param and prefix with cloudrunner's prefix if needed
         if self.PARAM_KEY_PREFIX in params:
-            params[self.PARAM_KEY_PREFIX] = self.KEY_PREFIX + params[self.PARAM_KEY_PREFIX]
+            params[self.PARAM_KEY_PREFIX] = "{0}{1}-{2}".format(
+                self.KEY_PREFIX,
+                infrastructure,
+                params[self.PARAM_KEY_PREFIX]
+            )
         else:
-            params[self.PARAM_KEY_PREFIX] = self.KEY_PREFIX
+            params[self.PARAM_KEY_PREFIX] = "{0}{1}".format(
+                self.KEY_PREFIX,
+                infrastructure
+            )
+        
         if params[self.PARAM_BLOCKING]:
             terminate_result = agent.terminate_instances(params)
             result['success'] = terminate_result

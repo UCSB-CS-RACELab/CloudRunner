@@ -2,6 +2,11 @@ class CRConstants(object):
     '''
     Central container for all global CloudRunner constants.
     '''
+    # Infrastructures
+    INFRA_LOCAL = "local"
+    INFRA_AWS = "aws"
+    INFRA_EUCA = "euca"
+    
     # Service parameter key names
     PARAM_INFRA = "infrastructure"
     PARAM_REGION = "region"
@@ -30,7 +35,11 @@ class CRConstants(object):
     PARAM_DB_ID = "db_id"
     PARAM_DB_IDS = "db_ids"
     PARAM_DB_ENTRY = "db_entry_data"
-    PARAM_COMMAND_STR = "command_string"
+    PARAM_DB_ENTRIES = "db_entries"
+    PARAM_BUCKET_NAME = "bucket_name"
+    PARAM_FILE_PATH = "local_file_path"
+    PARAM_FILE_URL = "remote_file_url"
+    PARAM_OUTPUT_PATH = "desired_output_path"
     
     # Possible job states for all jobs
     JOB_STATE_RUNNING = "running"

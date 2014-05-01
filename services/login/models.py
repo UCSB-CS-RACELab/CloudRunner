@@ -60,34 +60,42 @@ class User(WebApp2User):
     def get_credentials(self, infrastructure):
         '''
         '''
-        credentials = {}
-        if "credentials" not in self._properties:
-            credentials = {
-                'access_key': None,
-                'secret_key': None
-            }
-        else:
-            infrastructure = infrastructure.lower()
+        credentials = {
+            'access_key': None,
+            'secret_key': None
+        }
+        if "credentials" in self._properties:
+            infra = infrastructure.lower()
             creds_yaml = yaml.load(self.credentials)
-            try:
-                credentials = creds_yaml[infrastructure]
-            except KeyError, e:
-                credentials = {
-                    'access_key': None,
-                    'secret_key': None
-                }
+            if infra in creds_yaml:
+                credentials = creds_yaml[infra]
+        
         return credentials
     
     def set_credentials(self, infrastructure, credentials):
         '''
         '''
-        infrastructure = infrastructure.lower()
+        infra = infrastructure.lower()
         if "credentials" not in self._properties:
             self.credentials = "{}"
         creds_yaml = yaml.load(self.credentials)
-        creds_yaml[infrastructure] = {
+        creds_yaml[infra] = {
             'access_key': credentials['access_key'],
             'secret_key': credentials['secret_key']
         }
         self.credentials = yaml.dump(creds_yaml)
+    
+    def get_bucket_name(self, infrastructure):
+        '''
+        '''
+        infra = infrastructure.lower()
+        if "bucket_names" not in self._properties:
+            self.bucket_names = "{}"
+        bucket_names_yaml = yaml.load(self.bucket_names)
+        if infra not in bucket_names_yaml:
+            bucket_names_yaml[infra] = "{0}-output".format(self.user_id())
+            self.bucket_names = yaml.dump(bucket_names_yaml)
+            # Update DB entry explicitly since this is a getter
+            self.put()
+        return bucket_names_yaml[infra]
 

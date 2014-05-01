@@ -308,18 +308,21 @@ class EC2Worker(BaseWorker):
         credentials = parameters[self.PARAM_CREDENTIALS]
         creds = parameters['credentials']
         f = open('userfile','w')
-        userstr  = """#!/bin/bash \nset -x\nexec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1\ntouch anand3.txt\necho "testing logfile"\necho BEGIN\ndate '+%Y-%m-%d %H:%M:%S'\necho END\ntouch anand2.txt\n"""
-        userstr+='export AWS_ACCESS_KEY_ID={0}\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))
-        userstr+='export AWS_SECRET_ACCESS_KEY={0}\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
-        userstr+='echo export AWS_ACCESS_KEY_ID={0} >> ~/.bashrc\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))
-        userstr+='echo export AWS_SECRET_ACCESS_KEY={0} >> ~/.bashrc\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
-        userstr+='echo export AWS_ACCESS_KEY_ID={0} >> /home/ubuntu/.bashrc\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))   
-        userstr+='echo export AWS_SECRET_ACCESS_KEY={0} >> /home/ubuntu/.bashrc\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
-
-        userstr+='source ~/.bashrc \n'
-        userstr+='source /home/ec2-user/.bashrc \n'
-        #TODO: Revisit this before executing cloud tasks
-        userstr+="nohup celery -A tasks worker --autoreload --loglevel=info -n {0} --workdir /home/ubuntu > /home/ubuntu/nohup.log 2>&1 & \n".format(str(uuid.uuid4()))
+        userstr = """#!/bin/bash \nset -x \nexec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1 \n"""
+        userstr += "echo BEGIN \n"
+        #TODO: This doesnt work...
+        # userstr += "su ubuntu \n"
+        #TODO: So this is the workaround...(potentially unsafe to run worker as root with pickle serializer)
+        userstr += "export C_FORCE_ROOT=1"
+        # userstr += 'export AWS_ACCESS_KEY_ID={0}\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))
+        # userstr += 'export AWS_SECRET_ACCESS_KEY={0}\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
+        # userstr += 'echo export AWS_ACCESS_KEY_ID={0} >> ~/.bashrc\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))
+        # userstr += 'echo export AWS_SECRET_ACCESS_KEY={0} >> ~/.bashrc\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
+        # userstr += 'echo export AWS_ACCESS_KEY_ID={0} >> /home/ubuntu/.bashrc\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))   
+        # userstr += 'echo export AWS_SECRET_ACCESS_KEY={0} >> /home/ubuntu/.bashrc\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
+        # 
+        userstr += 'source ~/.bashrc \n'
+        userstr += "nohup celery -A services.jobmanager.tasks worker --autoreload --loglevel=info -n {0} --workdir /home/ubuntu/cloudrunner > /home/ubuntu/cloudrunner-worker.log 2>&1 & \n".format(str(uuid.uuid4()))
         
         f.write(userstr)
         f.close()

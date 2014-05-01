@@ -27,19 +27,23 @@ class BaseJob(object):
         os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../programs_yaml')
     )
     # Required parameters to initialize a new job.
+    PARAM_JOB_TYPE = CRConstants.PARAM_JOB_TYPE
+    PARAM_JOB_NAME = CRConstants.PARAM_JOB_NAME
+    PARAM_PROG_DIR_PATH = CRConstants.PARAM_PROG_DIR_PATH
     REQUIRED_INIT_PARAMS = [
-        CRConstants.PARAM_JOB_TYPE,
-        CRConstants.PARAM_JOB_NAME,
+        PARAM_JOB_TYPE,
+        PARAM_JOB_NAME,
         # CRConstants.PARAM_INFRA,
-        CRConstants.PARAM_PROG_DIR_PATH
+        PARAM_PROG_DIR_PATH
         # CRConstants.PARAM_YAML_DIR
     ]
     # Required keys to be present in the YAML config file
     REQUIRED_YAML_PARAMS = CRConstants.REQUIRED_PROGRAM_YAML_KEYS
     # Required parameters to run any job.
+    PARAM_BLOCKING = CRConstants.PARAM_BLOCKING
     REQUIRED_RUN_PARAMS = [
         'output_location',
-        CRConstants.PARAM_BLOCKING
+        PARAM_BLOCKING
     ]
     
     def __init__(self, params):
@@ -108,7 +112,7 @@ class BaseJob(object):
             self.__add_bool_params_to_execution_string(params, optional_bool_params)
         print "\n" + self.execution_string + "\n"
     
-    def run(self, params):
+    def run(self, params, verbose=False):
         '''
         This method runs the actual job based off params, a dictionary of parameters. The
          params dictionary must contain the following keys:
@@ -129,19 +133,32 @@ class BaseJob(object):
         result = {
             "output_location": self.output_location
         }
+        if verbose:
+            print "Output location:", self.output_location
+        
         stdout = "{0}/stdout".format(self.output_location)
         stderr = "{0}/stderr".format(self.output_location)
         result["stdout_path"] = stdout
         result["stderr_path"] = stderr
+        if verbose:
+            print "About to execute following command:", self.execution_string
+        stdout_fh = open(stdout, 'w')
+        stderr_fh = open(stderr, 'w')
         p = subprocess.Popen(
             shlex.split(self.execution_string),
             stdin=subprocess.PIPE,
-            stdout=open(stdout, 'w'),
-            stderr=open(stderr, 'w')
+            stdout=stdout_fh,
+            stderr=stderr_fh
         )
-        if params['blocking']:
-            #TODO: Actually implement this
-            stdout, stderr = p.communicate()
+        if params[self.PARAM_BLOCKING]:
+            # Wait until it completes
+            p.communicate()
+            stdout_fh.close()
+            stderr_fh.close()
+            if p.returncode == 0:
+                result["status"] = CRConstants.JOB_STATE_FINISHED
+            else:
+                result["status"] = CRConstants.JOB_STATE_FAILED
         else:
             #TODO: What else should be returned?
             result["pid"] = str(p.pid)
@@ -220,8 +237,10 @@ class BaseJob(object):
             self.output_location = None
             return False
         # TODO: output_param is a global for now, could just be another thing to specify in YAML file??
-        self.__add_value_params_to_execution_string({output_param: self.output_location+'/result'},
-                                                    [output_param])
+        self.__add_value_params_to_execution_string(
+            {output_param: self.output_location+'/result'},
+            [output_param]
+        )
         for param_name in self.input_files:
             file_name = self.input_files[param_name][0]
             file_contents = self.input_files[param_name][1]

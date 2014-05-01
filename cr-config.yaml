@@ -1,11 +1,5 @@
-Testing-ssa:
-  available_infrastructures: [aws]
-  aws: Testing/StochKit
-Testing-tau_leaping:
-  available_infrastructures: [aws]
-  aws: Testing/StochKit
-available_programs: [Testing-ssa, Testing-tau_leaping]
+available_programs: []
 supported_infrastructures:
-  aws: {image_id: ami-152f357c, programs_path: /home/ubuntu/cloudrunner/programs,
-    programs_yaml_path: /home/ubuntu/cloudrunner/programs_yaml, ssh_username: ubuntu, default_region: us-east-1}
+  aws: {default_region: us-east-1, image_id: ami-f0997f98, programs_path: /home/ubuntu/cloudrunner/programs,
+    programs_yaml_path: /home/ubuntu/cloudrunner/programs_yaml, ssh_username: ubuntu}
   local: {programs_path: /Users/choruk/src/cloudrunner/programs, programs_yaml_path: /Users/choruk/src/cloudrunner/programs_yaml}

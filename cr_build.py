@@ -13,6 +13,9 @@ class CRBuilder(object):
     '''
     CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cr-config.yaml")
     
+    INFRA_LOCAL = CRConstants.INFRA_LOCAL
+    INFRA_AWS = CRConstants.INFRA_AWS
+    
     KEY_PROG_PATH = CRConstants.KEY_PROG_PATH
     KEY_SUPP_INFRA = CRConstants.KEY_SUPP_INFRA
     KEY_AVAIL_PROG = CRConstants.KEY_AVAIL_PROG
@@ -46,8 +49,8 @@ class CRBuilder(object):
             # Save certain key-value pairs directly as attributes
             self.supported_infra = self.config[self.KEY_SUPP_INFRA]
             # Make sure local info is always available
-            if "local" not in self.supported_infra:
-                self.supported_infra['local'] = {
+            if self.INFRA_LOCAL not in self.supported_infra:
+                self.supported_infra[self.INFRA_LOCAL] = {
                     self.KEY_PROG_PATH: os.path.join(os.path.abspath(
                         os.path.dirname(os.path.abspath(__file__)),
                         "../programs"
@@ -59,15 +62,15 @@ class CRBuilder(object):
                 }
                 self.config[self.KEY_SUPP_INFRA] = self.supported_infra
                 update_config = True
-            elif self.KEY_PROG_PATH not in self.supported_infra['local']:
-                self.supported_infra['local'][self.KEY_PROG_PATH] = os.path.join(os.path.abspath(
+            elif self.KEY_PROG_PATH not in self.supported_infra[self.INFRA_LOCAL]:
+                self.supported_infra[self.INFRA_LOCAL][self.KEY_PROG_PATH] = os.path.join(os.path.abspath(
                     os.path.dirname(os.path.abspath(__file__)),
                     "../programs"
                 ))
                 self.config[self.KEY_SUPP_INFRA] = self.supported_infra
                 update_config = True
-            elif self.KEY_PROG_YAML_PATH not in self.supported_infra['local']:
-                self.supported_infra['local'][self.KEY_PROG_YAML_PATH] = os.path.join(os.path.abspath(
+            elif self.KEY_PROG_YAML_PATH not in self.supported_infra[self.INFRA_LOCAL]:
+                self.supported_infra[self.INFRA_LOCAL][self.KEY_PROG_YAML_PATH] = os.path.join(os.path.abspath(
                     os.path.dirname(os.path.abspath(__file__)),
                     "../programs_yaml"
                 ))
@@ -75,8 +78,8 @@ class CRBuilder(object):
                 update_config = True
             # Make sure all the dirs exist
             local_dirs = [
-                self.supported_infra['local'][self.KEY_PROG_PATH],
-                self.supported_infra['local'][self.KEY_PROG_YAML_PATH]
+                self.supported_infra[self.INFRA_LOCAL][self.KEY_PROG_PATH],
+                self.supported_infra[self.INFRA_LOCAL][self.KEY_PROG_YAML_PATH]
             ]
             for local_path in local_dirs:
                 if not os.path.exists(local_path):
@@ -88,7 +91,7 @@ class CRBuilder(object):
                 # else it exists and is a directory
             # Now check the entries for the other infrastructures
             for infra in self.supported_infra:
-                if infra != 'local':
+                if infra != self.INFRA_LOCAL:
                     if self.KEY_PROG_PATH not in self.supported_infra[infra]:
                         failure_msg = "Error! CloudRunner config file ({0}) is missing the entry for the"
                         " programs location of the '{1}' infrastructure".format(
@@ -116,7 +119,7 @@ class CRBuilder(object):
             self.cloud_manager = CloudManager()
         #
         for index, infrastructure in enumerate(self.infra):
-            if infrastructure == 'local':
+            if infrastructure == self.INFRA_LOCAL:
                 print "Building input program(s) locally..."
                 for git_URL in self.git_clone_URLs:
                     build_result = self.__run_build_process(
@@ -269,7 +272,7 @@ class CRBuilder(object):
             infra_username,
             instance_ip,
             remote_yaml_path,
-            self.supported_infra['local'][self.KEY_PROG_YAML_PATH]
+            self.supported_infra[self.INFRA_LOCAL][self.KEY_PROG_YAML_PATH]
         )
         p = subprocess.Popen(
             shlex.split(scp_prog_yaml_str),
@@ -310,7 +313,7 @@ class CRBuilder(object):
                             infrastructure,
                             update_UI=self.generate_UI
                         )
-                        if "local" not in self.config[program_system_name] or True:
+                        if self.INFRA_LOCAL not in self.config[program_system_name] or True:
                             # Then we haven't successfully built this locally, but we still need the program
                             # description YAML file since it was built successfully on the cloud
                             remote_yaml_path = "{0}/{1}.yaml".format(
@@ -365,7 +368,7 @@ class CRBuilder(object):
                             infrastructure,
                             update_UI=self.generate_UI
                         )
-                        if "local" not in self.config[program_system_name] or True:
+                        if self.INFRA_LOCAL not in self.config[program_system_name] or True:
                             # Then we haven't successfully built this locally, but we still need the program
                             # description YAML file since it was built successfully on the cloud
                             remote_yaml_path = "{0}/{1}.yaml".format(
@@ -770,12 +773,12 @@ if __name__ == "__main__":
             type=str, nargs='+',
             help='One or more Git clone URLs of programs to deploy and build.'
         )
-        infra = [infra for infra in cloudrunner_builder.supported_infra if infra != "local"]
+        infra = [infra for infra in cloudrunner_builder.supported_infra if infra != cloudrunner_builder.INFRA_LOCAL]
         parser.add_argument(
             '--infra',
             required=True,
             type=str, nargs='+',
-            choices=infra+["local"],
+            choices=infra+[cloudrunner_builder.INFRA_LOCAL],
             help='One or more infrastructures where the program(s) should be deployed and built.'
         )
         for cloud in infra:
@@ -803,17 +806,14 @@ if __name__ == "__main__":
         if cloudrunner_builder.infra:
             # Make sure all the credentials were specified
             for infra in cloudrunner_builder.infra:
-                if infra == "local": continue
+                if infra == cloudrunner_builder.INFRA_LOCAL: continue
                 # We know that the cloudrunner_builder object has these attributes because argparse adds them
                 missing_access_key = cloudrunner_builder.__getattribute__("{0}_access_key".format(infra)) is None
                 missing_secret_key = cloudrunner_builder.__getattribute__("{0}_secret_key".format(infra)) is None
                 if missing_access_key or missing_secret_key:
                     parser.error("You failed to include all of the necessary credentials for the '{0}' infrastructure.".format(infra))
-            # Always do local
-            # cloudrunner_builder.infra.insert(0, "local")
         else:
-            # Always do local
-            # cloudrunner_builder.infra = ['local']
             print "Shouldn't get here"
+            sys.exit(1)
     
         cloudrunner_builder.build()

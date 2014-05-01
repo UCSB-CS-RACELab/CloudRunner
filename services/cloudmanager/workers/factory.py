@@ -1,3 +1,7 @@
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../'))
+from constants import CRConstants
+
 from ec2_worker import EC2Worker
 # from euca_agent import EucalyptusAgent
 
@@ -11,8 +15,8 @@ class CloudWorkerFactory(object):
     """
 
     workers = {
-        'aws': EC2Worker,
-        # 'euca': EucalyptusWorker
+        CRConstants.INFRA_AWS: EC2Worker,
+        # CRConstants.INFRA_EUCA: EucalyptusWorker
     }
 
     def create_agent(self, infrastructure):

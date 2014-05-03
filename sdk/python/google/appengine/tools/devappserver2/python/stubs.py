@@ -92,7 +92,7 @@ def fake_get_platform():
 class FakeFile(file):
   """File sub-class that enforces the restrictions of production."""
 
-  ALLOWED_MODES = frozenset(['r', 'rb', 'U', 'rU', 'w','w+'])
+  ALLOWED_MODES = frozenset(['r', 'rb', 'U', 'rU', 'w', 'w+', 'wb'])
 
   # Individual files that are allowed to be accessed.
   ALLOWED_FILES = set(os.path.normcase(filename)

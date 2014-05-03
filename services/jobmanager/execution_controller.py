@@ -137,9 +137,10 @@ class ExecutionController(object):
     
     def __run_local_job(self, job):
         # Local jobs can just store output directly in the filesystem
-        params["output_location"] = self.LOCAL_OUTPUT_DIR_PATH
-        # Make sure we don't wait on it to complete
-        params["blocking"] = False
+        params = {
+            "output_location": self.LOCAL_OUTPUT_DIR_PATH,
+            CRConstants.PARAM_BLOCKING: False
+        }
         result = job.run(params)
         return result
     

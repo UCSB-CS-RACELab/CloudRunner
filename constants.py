@@ -40,6 +40,12 @@ class CRConstants(object):
     PARAM_FILE_PATH = "local_file_path"
     PARAM_FILE_URL = "remote_file_url"
     PARAM_OUTPUT_PATH = "desired_output_path"
+    PARAM_WORKER_SIZE = "worker_size"
+    
+    # System-defined worker sizes (mapped to infrastructure-
+    # specific instance types in cloud_manager.py)
+    WORKER_SIZE_TINY = "tiny"
+    WORKER_SIZE_SMALL = "small"
     
     # Possible job states for all jobs
     JOB_STATE_RUNNING = "running"

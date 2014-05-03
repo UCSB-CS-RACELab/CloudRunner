@@ -13,9 +13,11 @@ class InvalidInfrastructureError(Exception):
 class CloudManager(object):
     '''
     '''
-    # NOTE: Changing these parameter names might have a negative effect
-    #       if it causes a mismatch between the parameter names specified
-    #       in the individual agent files and the ones specified here.
+    INFRA_AWS = CRConstants.INFRA_AWS
+    
+    WORKER_SIZE_TINY = CRConstants.WORKER_SIZE_TINY
+    WORKER_SIZE_SMALL = CRConstants.WORKER_SIZE_SMALL
+    
     PARAM_INFRA = CRConstants.PARAM_INFRA
     PARAM_REGION = CRConstants.PARAM_REGION
     PARAM_CREDENTIALS = CRConstants.PARAM_CREDENTIALS
@@ -28,6 +30,7 @@ class CloudManager(object):
     PARAM_INSTANCE_ID = CRConstants.PARAM_INSTANCE_ID
     PARAM_NUM_VMS = CRConstants.PARAM_NUM_VMS
     PARAM_BLOCKING = CRConstants.PARAM_BLOCKING
+    PARAM_WORKER_SIZE = CRConstants.PARAM_WORKER_SIZE
     
     LAUNCH_INSTANCES_REQ_PARAMS = [
         PARAM_INFRA,
@@ -96,11 +99,22 @@ class CloudManager(object):
         security_configured = temp_result["success"]
         result["key_pair_path"] = temp_result["absolute_key_path"]
         # Now try to launch the instances
-        #TODO: Remove True when background_thread is added (see next TODO)
+        #TODO: Remove True when background_thread is added (see TODO in else clause)
         if True or params[self.PARAM_BLOCKING]:
             # Synchronous so just call the method directly
             params["image_id"] = self.__get_image_id(infrastructure)
-            params["instance_type"] = "t1.micro"
+            # Use the right instance size
+            if self.PARAM_WORKER_SIZE in params and params[self.PARAM_WORKER_SIZE]:
+                params["instance_type"] = self.__infrastructure_instance_type(
+                    infrastructure,
+                    params[self.PARAM_WORKER_SIZE]
+                )
+            else:
+                params["instance_type"] = self.__infrastructure_instance_type(
+                    infrastructure,
+                    self.WORKER_SIZE_TINY
+                )
+            # params["instance_type"] = "m1.small"#"t1.micro"
             params["use_spot_instances"] = False
             instance_ids, public_ips, private_ips = agent.run_instances(
                 int(params[self.PARAM_NUM_VMS]),
@@ -213,4 +227,13 @@ class CloudManager(object):
     
     def __get_image_id(self, infrastructure):
         return CRConfigFile.get_image_id(infrastructure)
+    
+    def __infrastructure_instance_type(self, infra, worker_size):
+        if infra == self.INFRA_AWS:
+            if worker_size == self.WORKER_SIZE_TINY:
+                return "t1.micro"
+            elif worker_size == self.WORKER_SIZE_SMALL:
+                return "m1.small"
+        else:
+            pass
 

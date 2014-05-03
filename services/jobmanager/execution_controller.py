@@ -108,7 +108,6 @@ class ExecutionController(object):
             result["output_location"] = temp_result['output_location']
             result["status"] = temp_result["status"]
         else:
-            #TODO: This isn't fully implemented or tested
             job_params[self.PARAM_CREDENTIALS] = params[self.PARAM_CREDENTIALS]
             job_params[self.PARAM_REGION] = CRConfigFile.get_default_region_for_infrastructure(infrastructure)
             job_params[self.PARAM_BUCKET_NAME] = params[self.PARAM_BUCKET_NAME]

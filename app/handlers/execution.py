@@ -9,10 +9,13 @@ class JobWrapper(polymodel.PolyModel):
     Base DB wrapper for all jobs.
     '''
     user_id = db.StringProperty()
+    status = db.StringProperty()
     name = db.StringProperty()
     job_type = db.StringProperty()
     pid = db.StringProperty()
     output_location = db.StringProperty()
+    exception = db.StringProperty()
+    traceback = db.TextProperty()
 
 class LocalJobWrapper(JobWrapper):
     '''
@@ -25,7 +28,8 @@ class CloudJobWrapper(JobWrapper):
     DB wrapper for all cloud jobs.
     '''
     infrastructure = db.StringProperty()
-    cloud_db_id = db.StringProperty()
+    task_id = db.StringProperty()
+    output_url = db.StringProperty()
 
 class ExecutionHandler(BaseHandler):
     '''
@@ -103,18 +107,32 @@ class ExecutionHandler(BaseHandler):
             job_submission_params = {
                 CRConstants.PARAM_JOB_NAME: job_name,
                 CRConstants.PARAM_INFRA: infrastructure,
+                CRConstants.PARAM_CREDENTIALS: self.user.get_credentials(infrastructure),
                 CRConstants.PARAM_JOB_TYPE: program_name,
+                CRConstants.PARAM_BUCKET_NAME: self.user.get_bucket_name(infrastructure),
                 CRConstants.PARAM_JOB_PARAMS: program_params
             }
             result = execution_controller.run_job(job_submission_params)
             if result["success"]:
-                job_wrapper = LocalJobWrapper(
-                    user_id=self.user.user_id(),
-                    name=job_name,
-                    job_type=program_name,
-                    pid=result["pid"],
-                    output_location=result["output_location"]
-                )
+                job_wrapper = None
+                if infrastructure == CRConstants.INFRA_LOCAL:
+                    job_wrapper = LocalJobWrapper(
+                        user_id=self.user.user_id(),
+                        name=job_name,
+                        job_type=program_name,
+                        pid=result["pid"],
+                        output_location=result["output_location"]
+                    )
+                else:
+                    job_wrapper = CloudJobWrapper(
+                        user_id=self.user.user_id(),
+                        name=job_name,
+                        job_type=program_name,
+                        pid=result["pid"],
+                        output_location=None,
+                        infrastructure=infrastructure,
+                        task_id=result["task_id"]
+                    )
                 job_wrapper.put()
                 context = {
                     "programs": ExecutionController.available_programs(),

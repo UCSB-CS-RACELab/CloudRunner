@@ -21,7 +21,7 @@ function toggle(source) {
 </script>
 
 <div class="col-md-7 well">
-{% if local_jobs %}
+{% if local_jobs or cloud_jobs %}
   <form role="form" action="/status" method="post">
     <legend>
       <a data-toggle="modal" class="show" href="#help_modal1">
@@ -46,6 +46,30 @@ function toggle(source) {
       </thead>
       <tbody>
       {% for job in local_jobs %}
+        {% if job.status == "Pending" %}
+        <tr class="warning">
+        {% elif job.status == "Running" %}
+        <tr class="info">
+        {% elif job.status == "Finished" %}
+        <tr class="success">
+        {% elif job.status == "Failed" %}
+        <tr class="danger">
+        {% endif %}
+          <td><input type="checkbox" name="select_job" value="{{job.name}}"> </td>
+          <td>{{job.name}}</td>
+          <td>{{job.type}}</td>
+          <td>{{job.status}}</td>
+          <td>{{job.infrastructure}}</td>
+          <td>
+          {% if job.status == "Finished" %}
+            <a href="/status/{{job.name}}">View Results</a>
+          {% elif job.status == "Failed" %}
+            <a href="/status/{{job.name}}?debug=True">Get Debugging Info</a>
+          {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      {% for job in cloud_jobs %}
         {% if job.status == "Pending" %}
         <tr class="warning">
         {% elif job.status == "Running" %}

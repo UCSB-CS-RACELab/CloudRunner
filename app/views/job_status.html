@@ -24,10 +24,13 @@
     </dl>
   </div>
   <div class="well well-sm">
+  {% if debug %}
+    
+  {% else %}
     <form id="output-form" role="form" action="/status/{{job.name}}" method="post">
       <legend>Job Output</legend>
     {% if should_pull_remote %}
-      <button type="submit" name="action" value="pull_remote" class="btn btn-primary">
+      <button type="submit" name="action" value="pull_remote" class="btn btn-primary remote-file" data-loading-text="Downloading remote data...">
         Download remote data
       </button>
     {% else %}
@@ -36,7 +39,10 @@
         Access local data
       </button>
     {% endif %}
+    <p class='text-danger output-error'></p>
+    <p class='text-success output-success'></p>
     </form>
+  {% endif %}
   </div>
 </div>
 {% endblock %}

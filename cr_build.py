@@ -153,10 +153,14 @@ class CRBuilder(object):
                 print "Launching instance for the '{0}' infrastructure...".format(infrastructure)
                 
                 params = {
-                    'infrastructure': infrastructure,
-                    'count': 1,
-                    'blocking': True,
-                    'credentials': self.__get_credentials(infrastructure)
+                    CRConstants.PARAM_INFRA: infrastructure,
+                    CRConstants.PARAM_NUM_VMS: 1,
+                    CRConstants.PARAM_BLOCKING: True,
+                    CRConstants.PARAM_CREDENTIALS: self.__get_credentials(infrastructure),
+                    #TODO: Small is used here as we assume that the build process requires more
+                    #      memory than is available on the smaller (WORKER_SIZE_TINY) workers.
+                    #      Need to make this more dynamic if possible.
+                    CRConstants.PARAM_WORKER_SIZE: CRConstants.WORKER_SIZE_SMALL
                 }
                 launch_result = self.cloud_manager.launch_instances(params)
                 # time.sleep(5)

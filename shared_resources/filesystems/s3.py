@@ -22,31 +22,39 @@ class S3Agent(BaseFSAgent):
     PARAM_FILE_URL = CRConstants.PARAM_FILE_URL
     PARAM_OUTPUT_PATH = CRConstants.PARAM_OUTPUT_PATH
     
-    GET_REQUIRED_PARAMS = [
+    READ_REQUIRED_PARAMS = [
         PARAM_CREDENTIALS,
         PARAM_FILE_URL,
         PARAM_OUTPUT_PATH
     ]
     
-    PUT_REQUIRED_PARAMS = [
+    WRITE_REQUIRED_PARAMS = [
         PARAM_CREDENTIALS,
         PARAM_FILE_PATH
     ]
     
     def read(self, params):
         # URLs will be of the form:
-        #  https://s3.amazonaws.com/cloudrunner-April2014/ssa-job.tar
-        #  0     1 2                3                     4
+        #  https://bucket-name.s3.amazonaws.com/ssa-job.tar
+        #  0     1 2                           3
         file_url = params[self.PARAM_FILE_URL]
         # We want to extract the bucket and key names
         url_segments = file_url.split('/')
-        bucket_name = url_segments[3]
-        key_name = '/'.join(url_segments[4:])
+        bucket_segments = url_segments[2].split('.')
+        bucket_name = bucket_segments[0]
+        for segment in bucket_segments[1:]:
+            if segment == "s3":
+                break
+            bucket_name += '.{0}'.format(segment)
+        key_name = '/'.join(url_segments[3:])
         conn = self.__open_connection(params[self.PARAM_CREDENTIALS])
         # Dont want to create the bucket if it doesn't exist
         bucket = self.__get_bucket(conn, bucket_name, create=False)
         if not bucket:
-            return { "success": False }
+            return { 
+                "success": False,
+                "reason": "No bucket with the name {0} exists.".format(bucket_name)
+            }
         
         key = bucket.get_key(key_name)
         if key:
@@ -61,7 +69,10 @@ class S3Agent(BaseFSAgent):
                 "output_file_path": output_file_path
             }
         else:
-            return { "success": False }
+            return {
+                "success": False,
+                "reason": "No file exists with the key {0}.".format(key_name)
+            }
     
     def write(self, params):
         file_path = params[self.PARAM_FILE_PATH]

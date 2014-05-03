@@ -9,6 +9,22 @@ class CloudFileStorage(object):
     '''
     PARAM_INFRA = CRConstants.PARAM_INFRA
     PARAM_CREDENTIALS = CRConstants.PARAM_CREDENTIALS
+    PARAM_FILE_PATH = CRConstants.PARAM_FILE_PATH
+    PARAM_FILE_URL = CRConstants.PARAM_FILE_URL
+    PARAM_OUTPUT_PATH = CRConstants.PARAM_OUTPUT_PATH
+    
+    READ_REQUIRED_PARAMS = [
+        PARAM_INFRA,
+        PARAM_CREDENTIALS,
+        PARAM_FILE_URL,
+        PARAM_OUTPUT_PATH
+    ]
+    
+    WRITE_REQUIRED_PARAMS = [
+        PARAM_INFRA,
+        PARAM_CREDENTIALS,
+        PARAM_FILE_PATH
+    ]
     
     @classmethod
     def read(cls, params):

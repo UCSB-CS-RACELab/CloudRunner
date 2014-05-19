@@ -2,7 +2,7 @@ import os, sys, traceback
 import uuid
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../lib/boto'))
 import boto.dynamodb
-from boto.dynamodb.batch import BatchList
+from boto.dynamodb.batch import BatchList, BatchWriteList
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../'))
 from utils import utils
 from constants import CRConstants
@@ -42,14 +42,8 @@ class DynamoDBAgent(BaseDBAgent):
         the_batch = BatchList(conn)
         the_batch.add_batch(table, keys=db_IDs)
         batch_results = conn.batch_get_item(the_batch)
-        print batch_results
         for item_dict in batch_results['Responses'][table.name]['Items']:
             result[item_dict["taskid"]] = item_dict
-        # for db_id in db_IDs:
-        #     item = table.get_item(
-        #         hash_key=db_id
-        #     )
-        #     result[db_id] = item
         return result
     
     def create(self, params):
@@ -82,7 +76,50 @@ class DynamoDBAgent(BaseDBAgent):
         return True
     
     def delete(self, params):
-        pass
+        conn = self.__open_connection(params)
+        result = {}
+        if not self.__table_exists(conn):
+            # Can't delete an item in a non-existent table
+            result["success"] = False
+            result["reason"] = "No DynamoDB table exists with the name: '{0}'.".format(self.TABLE_NAME)
+        else:
+            result["success"] = True
+            db_ids = params[self.PARAM_DB_IDS]
+            # We can only try to delete 25 entries at a time
+            id_chunks = utils.chunks(db_ids, 25)
+            # Each individual delete is atomic, but batch delete as a whole isn't
+            # so we might need to retry deleting certain items in the batch.
+            max_batch_retries = 5
+            for id_chunk in id_chunks:
+                utils.log("Batch deleting items with ids: {0}".format(id_chunk))
+                # Batch delete the entries
+                the_batch = conn.new_batch_write_list()
+                the_batch.add_batch(
+                    self.__get_table(conn),
+                    deletes=id_chunk
+                )
+                response = conn.batch_write_item(the_batch)
+                utils.log(response)
+                unprocessed = response.get('UnprocessedItems', None)
+                batch_retries = 0
+                # Retry as many items as we can
+                while unprocessed and batch_retries < max_batch_retries:
+                    utils.log("Retrying UnprocessedItems: {0}".format(unprocessed))
+                    response = conn.layer1.batch_write_item(unprocessed)
+                    unprocessed = response.get('UnprocessedItems', None)
+                    batch_retries += 1
+                # If theres still some unprocessed, we just need to mark them
+                # unsuccessful.
+                if unprocessed:
+                    utils.log("Couldn't delete UnprocessedItems: {0}".format(unprocessed))
+                    for delete_request in unprocessed[self.TABLE_NAME]:
+                        result[delete_request["Key"]["taskid"]] = False
+                # Make sure the successful ones are marked as such
+                for db_id in id_chunk:
+                    if db_id in result:
+                        continue
+                    result[db_id] = True
+        return result
     
     def __table_exists(self, conn, table_name=TABLE_NAME):
         try:

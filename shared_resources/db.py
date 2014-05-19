@@ -70,7 +70,8 @@ class CloudDB(object):
         '''
         infrastructure = params[cls.PARAM_INFRA]
         db_agent = cls.__get_agent(infrastructure)
-        # result = db_agent.delete(params[cls.PARAM_DB_ENTRY])
+        result = db_agent.delete(params)
+        return result
     
     @classmethod
     def __get_agent(cls, infrastructure):

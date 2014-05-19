@@ -26,6 +26,11 @@ class CloudFileStorage(object):
         PARAM_FILE_PATH
     ]
     
+    DELETE_REQUIRED_PARAMS = [
+        PARAM_CREDENTIALS,
+        PARAM_FILE_URL
+    ]
+    
     @classmethod
     def read(cls, params):
         '''
@@ -46,7 +51,9 @@ class CloudFileStorage(object):
     def delete(cls, params):
         '''
         '''
-        pass
+        infrastructure = params[cls.PARAM_INFRA]
+        agent = cls.__get_agent(infrastructure)
+        return agent.delete(params)
     
     @classmethod
     def __get_agent(cls, infrastructure):

@@ -6,6 +6,7 @@ from constants import CRConstants
 from config_file import CRConfigFile
 from utils import utils
 from shared_resources.db import CloudDB
+from shared_resources.file_storage import CloudFileStorage
 
 from base_job import BaseJob, JobConfigurationException
 from task_queue import TaskQueue
@@ -34,16 +35,22 @@ class ExecutionController(object):
     PARAM_JOB_PARAMS = CRConstants.PARAM_JOB_PARAMS
     PARAM_JOB_PIDS = CRConstants.PARAM_JOB_PIDS
     PARAM_DB_IDS = CRConstants.PARAM_DB_IDS
+    PARAM_FILE_URL = CRConstants.PARAM_FILE_URL
     
-    # NOTE: PARAM_CREDENTIALS, PARAM_REGION are required unless PARAM_INFRA == INFRA_LOCAL
+    # NOTE: PARAM_CREDENTIALS is required unless PARAM_INFRA == INFRA_LOCAL
     RUN_JOB_REQ_PARAMS = [
         PARAM_INFRA,
         PARAM_JOB_NAME,
         PARAM_JOB_TYPE,
         PARAM_JOB_PARAMS
     ]
-    
+    # NOTE: PARAM_CREDENTIALS is required unless PARAM_INFRA == INFRA_LOCAL
     QUERY_JOB_REQ_PARAMS = [
+        PARAM_INFRA,
+        PARAM_JOB_PIDS
+    ]
+    # NOTE: PARAM_CREDENTIALS is required unless PARAM_INFRA == INFRA_LOCAL
+    DELETE_JOB_REQ_PARAMS = [
         PARAM_INFRA,
         PARAM_JOB_PIDS
     ]
@@ -119,10 +126,15 @@ class ExecutionController(object):
         utils.log("RunJob exiting with result: {0}".format(result))
         return result
     
+    def kill_job(self, params):
+        '''
+        '''
+        #TODO
+        pass
+    
     def query_job(self, params):
         '''
         '''
-        result = {}
         infrastructure = params[self.PARAM_INFRA]
         if infrastructure == self.INFRA_LOCAL:
             pids = params[self.PARAM_JOB_PIDS]
@@ -134,6 +146,61 @@ class ExecutionController(object):
             params[self.PARAM_REGION] = CRConfigFile.get_default_region_for_infrastructure(infrastructure)
             jobs = CloudDB.get(params)
             return jobs
+    
+    def delete_job(self, params):
+        '''
+        '''
+        result = {}
+        infrastructure = params[self.PARAM_INFRA]
+        if infrastructure == self.INFRA_LOCAL:
+            # Nothing we need to do for local jobs
+            pass
+        else:
+            # We need to get the DB entries first.
+            db_ids = params[self.PARAM_JOB_PIDS]
+            params[self.PARAM_DB_IDS] = db_ids
+            params[self.PARAM_REGION] = CRConfigFile.get_default_region_for_infrastructure(infrastructure)
+            jobs = CloudDB.get(params)
+            #TODO: Check this
+            jobs.pop('success')
+            # First, try to delete all the DB entries
+            delete_db_result = CloudDB.delete(params)
+            success = delete_db_result.pop("success")
+            result["success"] = success
+            # If we couldn't delete any of the DB entries, just stop here and return
+            # error message.
+            if not success:
+                result["reason"] = delete_db_result["reason"]
+                return result
+            # Not all DB entries were necessarily deleted...
+            for db_id in delete_db_result:
+                result[db_id] = {
+                    "success": delete_db_result[db_id]
+                }
+            utils.log("Result of cloud DB deletion: {0}".format(result))
+            # Then, we need to delete all of the file storage tied with these jobs
+            utils.log("All jobs: {0}".format(jobs))
+            jobs_with_file_storage = [jobs[job] for job in jobs if "output_url" in jobs[job] and jobs[job]["output_url"]]
+            utils.log("All jobs with file storage: {0}".format(jobs_with_file_storage))
+            for job in jobs_with_file_storage:
+                # But if we couldn't delete the DB entry, we shouldn't delete the remote data
+                if not result[job["taskid"]]["success"]:
+                    utils.log("Not deleting file storage of job '{0}'".format(job["taskid"]))
+                    continue
+                # Delete remote output
+                delete_output_params = {
+                    self.PARAM_INFRA: infrastructure,
+                    self.PARAM_CREDENTIALS: params[self.PARAM_CREDENTIALS],
+                    self.PARAM_FILE_URL: job["output_url"]
+                }
+                delete_output_result = CloudFileStorage.delete(delete_output_params)
+                utils.log("Deleted remote file storage of job '{0}'".format(job["taskid"]))
+                result[job["taskid"]]["success"] = delete_output_result["success"]
+                if not delete_output_result["success"]:
+                    # Pass on the reason and continue to next job
+                    result[job["taskid"]]["reason"] = delete_output_result["reason"]
+                    continue
+        return result
     
     def __run_local_job(self, job):
         # Local jobs can just store output directly in the filesystem

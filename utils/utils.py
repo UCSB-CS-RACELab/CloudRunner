@@ -70,6 +70,22 @@ def write_key_file(location, content):
         file_handle.close()
         os.chmod(path, 0600)
 
+def chunks(l, chunk_size):
+    """
+    Splits the list l into chunks of size chunk_size and returns a list of lists.
+    Note that the last list (i.e. chunk) might have less than chunk_size items.
+    """
+    result = []
+    for i in xrange(0, len(l), chunk_size):
+        result.append(l[i:i+chunk_size])
+    return result
+
+def initialize_logger():
+    """
+    Initialize the logger used in log().
+    """
+    logging.getLogger().setLevel(logging.DEBUG)
+
 def log(msg):
     """
     Log the specified message to the stdout and flush the stream.

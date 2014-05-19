@@ -33,20 +33,17 @@ class S3Agent(BaseFSAgent):
         PARAM_FILE_PATH
     ]
     
+    DELETE_REQUIRED_PARAMS = [
+        PARAM_CREDENTIALS,
+        PARAM_FILE_URL
+    ]
+    
     def read(self, params):
-        # URLs will be of the form:
-        #  https://bucket-name.s3.amazonaws.com/ssa-job.tar
-        #  0     1 2                           3
+        '''
+        '''
         file_url = params[self.PARAM_FILE_URL]
         # We want to extract the bucket and key names
-        url_segments = file_url.split('/')
-        bucket_segments = url_segments[2].split('.')
-        bucket_name = bucket_segments[0]
-        for segment in bucket_segments[1:]:
-            if segment == "s3":
-                break
-            bucket_name += '.{0}'.format(segment)
-        key_name = '/'.join(url_segments[3:])
+        bucket_name, key_name = self.__parse_s3_url(file_url)
         conn = self.__open_connection(params[self.PARAM_CREDENTIALS])
         # Dont want to create the bucket if it doesn't exist
         bucket = self.__get_bucket(conn, bucket_name, create=False)
@@ -75,6 +72,8 @@ class S3Agent(BaseFSAgent):
             }
     
     def write(self, params):
+        '''
+        '''
         file_path = params[self.PARAM_FILE_PATH]
         conn = self.__open_connection(params[self.PARAM_CREDENTIALS])
         # Now we need a bucket to place this file in
@@ -103,8 +102,45 @@ class S3Agent(BaseFSAgent):
         return result
     
     def delete(self, params):
-        #TODO
-        raise NotImplementedError
+        '''
+        '''
+        conn = self.__open_connection(params[self.PARAM_CREDENTIALS])
+        file_url = params[self.PARAM_FILE_URL]
+        bucket_name, key_name = self.__parse_s3_url(file_url)
+        # Cant delete the bucket if it doesn't exist
+        bucket = self.__get_bucket(conn, bucket_name, create=False)
+        if not bucket:
+            return { 
+                "success": False,
+                "reason": "No bucket with the name {0} exists.".format(bucket_name)
+            }
+        # Now for the actual file
+        key = bucket.get_key(key_name)
+        if key:
+            # Delete it
+            key.delete()
+            return {
+                "success": True
+            }
+        else:
+            return {
+                "success": False,
+                "reason": "No file exists with the key {0}.".format(key_name)
+            }
+    
+    def __parse_s3_url(self, url):
+        # URLs will be of the form:
+        #  https://bucket-name.s3.amazonaws.com/ssa-job.tar
+        #  0     1 2                           3
+        url_segments = url.split('/')
+        bucket_segments = url_segments[2].split('.')
+        bucket_name = bucket_segments[0]
+        for segment in bucket_segments[1:]:
+            if segment == "s3":
+                break
+            bucket_name += '.{0}'.format(segment)
+        key_name = '/'.join(url_segments[3:])
+        return bucket_name, key_name
     
     def __sanitize_bucket_name(self, bucket_name):
         # Can't have capital letters in bucket names

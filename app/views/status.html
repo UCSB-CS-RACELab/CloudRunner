@@ -78,6 +78,8 @@ function toggle(source) {
         <tr class="success">
         {% elif job.status == "Failed" %}
         <tr class="danger">
+        {% else %}
+        <tr>
         {% endif %}
           <td><input type="checkbox" name="select_job" value="{{job.name}}"> </td>
           <td>{{job.name}}</td>
@@ -95,16 +97,23 @@ function toggle(source) {
       {% endfor %}
       </tbody>
     </table>
-    <button type="submit" class="btn btn-primary btn-large" name="action" value="delete">
+    <button type="submit" class="btn btn-primary btn-large delete-btn" name="action" value="delete" data-loading-text="Deleting jobs...">
       <span class="glyphicon glyphicon-trash"></span> Delete Selected
     </button>
     <button type="submit" class="btn btn-primary btn-large" name="action" value="refresh">
       <span class="glyphicon glyphicon-refresh"></span> Refresh
     </button>
+    <p id="delete-error-infra" class="text-danger"></p>
+    <p id="delete-error-job" class="text-danger"></p>
+    <p id="delete-success" class="text-success"></p>
   </form>
 {% else %}
 <h2>There are no Jobs present in the system.</h2>
 {% endif %}
             
 </div>
+{% endblock %}
+
+{% block jscontent %}
+<script src="/static/js/status.js"></script>
 {% endblock %}

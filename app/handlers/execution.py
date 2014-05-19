@@ -21,7 +21,7 @@ class LocalJobWrapper(JobWrapper):
     '''
     DB wrapper for all local jobs.
     '''
-    pass
+    infrastructure = db.StringProperty(default=CRConstants.INFRA_LOCAL)
 
 class CloudJobWrapper(JobWrapper):
     '''

@@ -6,6 +6,7 @@ from execution import JobWrapper, LocalJobWrapper, CloudJobWrapper
 from constants import CRConstants
 from services.jobmanager import ExecutionController
 from shared_resources.file_storage import CloudFileStorage
+from utils import utils
 
 class StatusPage(BaseHandler):
     '''
@@ -22,16 +23,118 @@ class StatusPage(BaseHandler):
     def post(self):
         '''
         '''
-        params = self.request.POST
-        action = params["action"]
+        #Slightly hacky, but it works
+        try:
+            action = json.loads(self.request.POST.items()[0][0])["action"]
+        except Exception:
+            action = self.request.POST["action"]
+        
         if action == "refresh":
             context = self.__get_context()
             return self.render_response("status.html", **context)
+        
         elif action == "delete":
-            #TODO: Add support for delete button
-            pass
+            # Set content-type header
+            self.response.headers['Content-Type'] = 'application/json'
+            params = json.loads(self.request.POST.items()[0][0])
+            all_job_names = params["jobs"]
+            # Need to separate them out by infrastructure
+            jobs_by_infra = {}
+            all_jobs_query = JobWrapper.all()
+            all_jobs_query.filter("name IN", all_job_names)
+            for job_wrapper in all_jobs_query.run():
+                infrastructure = job_wrapper.infrastructure
+                if infrastructure in jobs_by_infra:
+                    jobs_by_infra[infrastructure].append(job_wrapper)
+                else:
+                    jobs_by_infra[infrastructure] = [job_wrapper]
+            # Now we need to call delete for all the jobs, one infra
+            # at a time.
+            result = {}
+            partial_failures = []
+            for infra in jobs_by_infra:
+                jobs = jobs_by_infra[infra]
+                if infra == CRConstants.INFRA_LOCAL:
+                    # We can delete local jobs ourself
+                    for job in jobs:
+                        # Remove actual output data
+                        self.__delete_local_data(job.output_location)
+                        # Delete entry from GAE db
+                        job.key.delete()
+                else:
+                    delete_params = {
+                        CRConstants.PARAM_INFRA: infra,
+                        CRConstants.PARAM_CREDENTIALS: self.user.get_credentials(infra),
+                        CRConstants.PARAM_JOB_PIDS: [job.pid for job in jobs]
+                    }
+                    execution_controller = ExecutionController()
+                    delete_result = execution_controller.delete_job(delete_params)
+                    success = delete_result.pop("success")
+                    # If we couldn't delete ALL of the jobs for a certain infrastructure,
+                    # this is a potentially serious issue.
+                    if not success:
+                        utils.log("Failed to delete any jobs for the {0} infrastructure with reason: {1}".format(
+                            infra,
+                            delete_result["reason"]
+                        ))
+                        if "infra_error_msg" in result:
+                            result["infra_error_msg"] += ", {0}".format(self.__display_name_for_infra(infra))
+                        else:
+                            result["infra_error_msg"] = "Failed to delete any jobs for the following infrastructure(s): {0}".format(
+                                self.__display_name_for_infra(infra)
+                            )
+                        continue
+                    # Else at least some entries were deleted...
+                    for pid in delete_result:
+                        job_delete_result = delete_result[pid]
+                        if job_delete_result["success"]:
+                            # Successful deletion
+                            job = [job for job in jobs if job.pid == pid][0]
+                            # Might need to delete local data if already downloaded
+                            if job.output_location:
+                                self.__delete_local_data(job.output_location)
+                            job.delete()
+                        else:
+                            # If we couldn't delete SOME of the jobs for a certain infrastructure, this could just be due to 
+                            # hitting our rate limit (i.e. write throughput on DynamoDB table for AWS). However, if there was
+                            # an error that cannot be retried (i.e. we might also have failed to delete the remote file
+                            # storage associated with the DB entry), there should be a "reason" specified.
+                            if "reason" in job_delete_result:
+                                utils.log("Failed to delete job '{0}' for the {1} infrastructure with reason: {2}".format(
+                                    pid,
+                                    infra,
+                                    job_delete_result["reason"]
+                                ))
+                                #TODO: What should be displayed to user for this case?
+                            elif infra not in partial_failures:
+                                partial_failures.append(infra)
+            # Construct error strings if necessary
+            result["success"] = True
+            if partial_failures:
+                result["job_error_msg"] = "Some of the jobs couldn't be deleted at this time for the following infrastructure(s): {0}".format(
+                    self.__display_name_for_infra(partial_failures[0])
+                )
+                for infra in partial_failures[1:]:
+                    result["job_error_msg"] += ", {0}"
+                result["job_error_msg"] += ". Please try again later."
+                result["success"] = False
+            if "infra_error_msg" in result:
+                result["infra_error_msg"] += "."
+                result["success"] = False
+            # Return the JSON
+            return self.response.write(json.dumps(result))
         else:
             pass
+    
+    def __display_name_for_infra(self, infra):
+        if infra == CRConstants.INFRA_LOCAL:
+            return "Local"
+        elif infra == CRConstants.INFRA_AWS:
+            return "AWS"
+        elif infra == CRConstants.INFRA_EUCA:
+            return "Eucalyptus"
+        else:
+            return "Invalid"
     
     def __get_context(self):
         context = {}
@@ -112,24 +215,15 @@ class StatusPage(BaseHandler):
             jobs_list += all_jobs[job_type]
         return jobs_list
     
-    def __display_name_for_infra(self, infra):
-        if infra == CRConstants.INFRA_LOCAL:
-            return "Local"
-        elif infra == CRConstants.INFRA_AWS:
-            return "AWS"
-        elif infra == CRConstants.INFRA_EUCA:
-            return "Eucalyptus"
-        else:
-            return "Invalid"
+    def __delete_local_data(self, output_location):
+        delete_data_string = "rm -rf {0}".format(output_location)
+        utils.log(delete_data_string)
+        os.system(delete_data_string)
+        
 
 class JobStatusPage(BaseHandler):
     '''
-    '''
-    OUTPUT_DIR_LOCATION = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "../../output"
-    )
-    
+    '''    
     def authentication_required(self):
         return True
     

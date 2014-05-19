@@ -1,7 +1,8 @@
-import os, logging
+import os
 import webapp2, jinja2
 from webapp2_extras import auth, sessions, sessions_memcache
 from services.login.models import User
+from utils import utils
 
 class BaseHandler(webapp2.RequestHandler):
     """
@@ -9,6 +10,11 @@ class BaseHandler(webapp2.RequestHandler):
     It also has helper methods for storing and retrieving objects from session and for rendering the response to the clients.
     All the request handlers should extend this class.
     """
+    OUTPUT_DIR_LOCATION = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "../../output"
+    )
+    
     def __init__(self, request, response):
         # Initialize the jinja environment
         self.jinja_environment = jinja2.Environment(
@@ -16,7 +22,7 @@ class BaseHandler(webapp2.RequestHandler):
             loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../views'))
         )
         # Initialize logger
-        logging.getLogger().setLevel(logging.DEBUG)
+        utils.initialize_logger()
         self.auth = auth.get_auth()
         # If not logged in, the dispatch() call will redirect to /login if needed
         if self.logged_in():

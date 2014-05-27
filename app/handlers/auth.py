@@ -3,12 +3,13 @@ import logging
 from google.appengine.ext import ndb
 from google.appengine.ext import db
 
-from webapp2_extras.auth import InvalidAuthIdError, InvalidPasswordError
 from webapp2_extras import security
 
 from base import BaseHandler
 from services.login.models import User
+from services.login.auth import GateKeeper, Registrar
 from services.login.admin import PendingUsersList, SecretToken
+from constants import CRConstants
 
 class UserRegistrationPage(BaseHandler):
     '''
@@ -54,85 +55,67 @@ class UserRegistrationPage(BaseHandler):
         if secret_key is None:
             # Normal user registration
             logging.info('Registering a normal user...')
-            user_email = self.request.POST['email']
-            # Has this user been approved?
-            pending_users_list = PendingUsersList.shared_list()
-            if pending_users_list.is_user_approved(user_email):
-                # Then create the user
-                _attrs = {
-                    'email_address': user_email,
-                    'name': self.request.POST['name'],
-                    'password_raw': self.request.POST['password']
+            params = {
+                CRConstants.PARAM_USER_EMAIL: self.request.POST['email'],
+                CRConstants.PARAM_USER_PASS: self.request.POST['password'],
+                CRConstants.PARAM_USER_NAME: self.request.POST['name']
+            }
+            result = Registrar.register_new_user(params)
+            if result["success"]:
+                context = {
+                    'success_alert': True,
+                    'alert_message': 'Account creation successful! You may now log in with your new account.'
                 }
-                success, user = self.auth.store.user_model.create_user(user_email, **_attrs)
-                
-                if success:
-                    # Remove the user from the approved list now
-                    pending_users_list.remove_user_from_approved_list(user_email)
+                return self.render_response('login.html', **context)
+            else:
+                if 'message' in result:
                     context = {
-                        'success_alert': True,
-                        'alert_message': 'Account creation successful! You may now log in with your new account.'
+                        'error_alert': True,
+                        'alert_message': result['message']
                     }
                     return self.render_response('login.html', **context)
                 else:
-                    logging.info("Acount registration failed for: {0}".format(user))
                     context = {
                         'email_address': self.request.POST['email'],
                         'name': self.request.POST['name'],
                         'user_registration_failed': True
                     }
                     return self.render_response('user_registration.html', **context)
-            else:
-                # Not approved
-                context = {
-                    'error_alert': True,
-                    'alert_message': 'You need to be approved by the admin before you can create an account.'
-                }
-                return self.render_response('login.html', **context)
         else:
             # Attempt to create an admin user
             logging.info('Registering an admin user...')
-            # Check the secret token
-            if SecretToken.is_admin_token(secret_key):
-                # Then we can attempt to create an admin
-                if User.admin_exists():
-                    logging.info("An admin already exists, canceling registration...")
-                    # Delete the token from the DB and redirect to login, only one admin allowed
-                    SecretToken.destroy_all()
-                    return self.redirect('/login')
-                else:
-                    # CREATE THE ADMIN ALREADY
-                    _attrs = {
-                        'email_address': self.request.POST['email'],
-                        'name': self.request.POST['name'],
-                        'password_raw': self.request.POST['password'],
-                        'is_admin': 'YES'
-                    }
-                    success, user = self.auth.store.user_model.create_user(_attrs['email_address'], **_attrs)
-                    
-                    if success:
-                        # Invalidate the token
-                        SecretToken.destroy_all()
-                        context = {
-                            'success_alert': True,
-                            'alert_message': 'Account creation successful! You may now log in with your new account.'
-                        }
-                        return self.render_response('login.html', **context)
-                    else:
-                        context = {
-                            'email_address': self.request.POST['email'],
-                            'name': self.request.POST['name'],
-                            'user_registration_failed': True
-                        }
-                        return self.render_response('user_registration.html', **context)
-            
-            else:
-                # Unauthorized secret key
+            params = {
+                CRConstants.PARAM_ADMIN_TOKEN: secret_key,
+                CRConstants.PARAM_USER_EMAIL: self.request.POST['email'],
+                CRConstants.PARAM_USER_PASS: self.request.POST['password'],
+                CRConstants.PARAM_USER_NAME: self.request.POST['name']
+            }
+            result = Registrar.register_new_admin(params)
+            if result["success"]:
                 context = {
-                    'error_alert': True,
-                    'alert_message': 'Invalid secret token.'
+                    'success_alert': True,
+                    'alert_message': 'Account creation successful! You may now log in with your new account.'
                 }
                 return self.render_response('login.html', **context)
+            else:
+                reason = result["reason"]
+                if reason == CRConstants.REGISTRATION_FAIL_ADMIN_EXISTS:
+                    return self.redirect('/login')
+                elif reason == CRConstants.REGISTRATION_FAIL_INVALID_TOKEN:
+                    context = {
+                        'error_alert': True,
+                        'alert_message': 'Invalid secret token.'
+                    }
+                    return self.render_response('login.html', **context)
+                elif reason == CRConstants.REGISTRATION_FAIL_UNEXPECTED:
+                    context = {
+                        'email_address': self.request.POST['email'],
+                        'name': self.request.POST['name'],
+                        'user_registration_failed': True
+                    }
+                    return self.render_response('user_registration.html', **context)
+                else:
+                    utils.log("Found unrecognized reason for admin registration failure: {0}".format(reason))
 
 class LoginPage(BaseHandler):
     """
@@ -147,8 +130,7 @@ class LoginPage(BaseHandler):
             secret_key = self.request.GET['secret_key']
         except KeyError:
             secret_key = None
-        logging.info("WORKS")
-        if SecretToken.is_admin_token(secret_key) and not User.admin_exists():
+        if Registrar.validate_token(secret_key):
             return self.redirect('/register?secret_key={0}'.format(secret_key))
         # Just ignore unauthorized secret key query string param completely...
         return self.render_response('login.html')
@@ -164,16 +146,16 @@ class LoginPage(BaseHandler):
             request_account = False
             
         if request_account:
-            # Just an email address here, we should first make sure they havent been approved
-            pending_users_list = PendingUsersList.shared_list()
-            if pending_users_list.is_user_approved(email_address):
-                context = {
-                    'approved_user_message': True
-                }
-                return self.render_response('user_registration.html', **context)
-            # Now add to approval waitlist
-            success = pending_users_list.add_user_to_approval_waitlist(email_address)
-            if success:
+            # Just an email address here
+            result = Registrar.request_user_account(email_address)
+            if result["success"]:
+                # Might have already been approved
+                if "approved" in result and result["approved"]:
+                    context = {
+                        'approved_user_message': True
+                    }
+                    return self.render_response('user_registration.html', **context)
+                # Else it was a successful request
                 context = {
                     'success_alert': True,
                     'alert_message': 'Successfully requested an account!'
@@ -188,13 +170,15 @@ class LoginPage(BaseHandler):
         else:
             # Login attempt, need to grab password too
             password = self.request.POST['password']
-            try:
-                user = self.auth.get_user_by_password(email_address, password, remember=True)
-                # Success, put user in the session and redirect to home page
-                self.auth.set_session(user)
+            params = {
+                CRConstants.PARAM_USER_EMAIL: email_address,
+                CRConstants.PARAM_USER_PASS: password
+            }
+            result = GateKeeper.login(params)
+            if result["success"]:
+                self.auth.set_session(result["user"])
                 return self.redirect('/')
-            except (InvalidAuthIdError, InvalidPasswordError) as e:
-                logging.info('Login failed for user: {0} with exception: {1}'.format(email_address, e))
+            else:
                 context = {
                     'error_alert': True,
                     'alert_message': 'The email or password you entered is incorrect.'

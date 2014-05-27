@@ -41,6 +41,15 @@ class CRConstants(object):
     PARAM_FILE_URL = "remote_file_url"
     PARAM_OUTPUT_PATH = "desired_output_path"
     PARAM_WORKER_SIZE = "worker_size"
+    PARAM_ADMIN_TOKEN = "secret_key"
+    PARAM_USER_EMAIL = "email_address"
+    PARAM_USER_PASS = "password"
+    PARAM_USER_NAME = "name"
+    
+    # Failure codes
+    REGISTRATION_FAIL_INVALID_TOKEN = "invalid secret token"
+    REGISTRATION_FAIL_ADMIN_EXISTS = "admin user already exists"
+    REGISTRATION_FAIL_UNEXPECTED = "unexpected error"
     
     # System-defined worker sizes (mapped to infrastructure-
     # specific instance types in cloud_manager.py)

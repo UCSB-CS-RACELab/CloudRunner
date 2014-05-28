@@ -114,6 +114,7 @@ class ExecutionController(object):
             result["pid"] = temp_result["pid"]
             result["output_location"] = temp_result['output_location']
             result["status"] = temp_result["status"]
+            result["exec_str"] = temp_result["exec_str"]
         else:
             job_params[self.PARAM_CREDENTIALS] = params[self.PARAM_CREDENTIALS]
             job_params[self.PARAM_REGION] = CRConfigFile.get_default_region_for_infrastructure(infrastructure)

@@ -112,7 +112,7 @@ def task(params):
         result = job.run(run_params, verbose=True)
         if not result["success"]:
             reason = result["reason"]
-            print "Job couldn't be run because: '{0}'".format(reason)
+            print "Job failed to run because: '{0}'".format(reason)
             data = {
                 "status": CRConstants.JOB_STATE_FAILED,
                 "message": reason
@@ -174,7 +174,9 @@ def task(params):
             "message": "The program finished executing successfully.",
             "output_url": s3_result["output_url"],
             "bucket_name": s3_result["bucket_name"],
-            "cloud_execution_time": total_time.total_seconds()
+            "cloud_execution_time": total_time.total_seconds(),
+            #TODO: Update worker image w/ new cloudrunner
+            "exec_str": result["exec_str"]
         }
         update_db_entry(
             infrastructure,

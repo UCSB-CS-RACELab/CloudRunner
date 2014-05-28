@@ -165,6 +165,7 @@ class BaseJob(object):
             result["status"] = CRConstants.JOB_STATE_RUNNING
         
         result["success"] = True
+        result["exec_str"] = self.execution_string
         return result
     
     def __assert_required_parameters(self, params, required_params, is_dict=False):

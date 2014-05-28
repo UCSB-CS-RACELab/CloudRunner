@@ -16,6 +16,7 @@ class JobWrapper(polymodel.PolyModel):
     output_location = db.StringProperty()
     exception = db.StringProperty()
     traceback = db.TextProperty()
+    exec_str = db.StringProperty()
 
 class LocalJobWrapper(JobWrapper):
     '''
@@ -71,6 +72,8 @@ class ExecutionHandler(BaseHandler):
                 'infrastructures': ExecutionController.available_infrastructures_for_program(program_name),
                 'infra': infrastructure
             }
+            #TODO: Check if there are workers available for the selected infrastructure
+            #      and return an error if not.
             # ...and make sure the job name is unique
             job_name = params['job_name']
             name_exists = db.GqlQuery("SELECT * FROM JobWrapper WHERE name = :1", job_name).get()
@@ -121,7 +124,8 @@ class ExecutionHandler(BaseHandler):
                         name=job_name,
                         job_type=program_name,
                         pid=result["pid"],
-                        output_location=result["output_location"]
+                        output_location=result["output_location"],
+                        exec_str=result["exec_str"]
                     )
                 else:
                     job_wrapper = CloudJobWrapper(

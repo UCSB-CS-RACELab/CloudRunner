@@ -60,7 +60,7 @@ class StatusPage(BaseHandler):
                         # Remove actual output data
                         self.__delete_local_data(job.output_location)
                         # Delete entry from GAE db
-                        job.key.delete()
+                        job.delete()
                 else:
                     delete_params = {
                         CRConstants.PARAM_INFRA: infra,
@@ -197,6 +197,7 @@ class StatusPage(BaseHandler):
                             job_wrapper.traceback = job_dict["traceback"]
                         elif job_wrapper.status == CRConstants.JOB_STATE_FINISHED:
                             job_wrapper.output_url = job_dict["output_url"]
+                            job_wrapper.exec_str = job_dict["exec_str"]
                         job_wrapper.put()
                         job["status"] = job_wrapper.status.capitalize()
                     else:

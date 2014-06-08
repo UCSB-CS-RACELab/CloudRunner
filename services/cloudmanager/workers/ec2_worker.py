@@ -43,6 +43,8 @@ class EC2Worker(BaseWorker):
     PARAM_KEY_PREFIX = CRConstants.PARAM_KEY_PREFIX
     PARAM_INSTANCE_IDS = CRConstants.PARAM_INSTANCE_IDS
     PARAM_INSTANCE_ID = CRConstants.PARAM_INSTANCE_ID
+    PARAM_WORKER_QUEUE = CRConstants.PARAM_WORKER_QUEUE
+    PARAM_QUEUE_HEAD = CRConstants.PARAM_QUEUE_HEAD
     PARAM_SPOT = CRConstants.PARAM_SPOT
     PARAM_SPOT_PRICE = CRConstants.PARAM_SPOT_PRICE
 
@@ -314,16 +316,42 @@ class EC2Worker(BaseWorker):
         # userstr += "su ubuntu \n"
         #TODO: So this is the workaround...(potentially unsafe to run worker as root with pickle serializer)
         userstr += "export C_FORCE_ROOT=1"
-        # userstr += 'export AWS_ACCESS_KEY_ID={0}\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))
-        # userstr += 'export AWS_SECRET_ACCESS_KEY={0}\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
-        # userstr += 'echo export AWS_ACCESS_KEY_ID={0} >> ~/.bashrc\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))
-        # userstr += 'echo export AWS_SECRET_ACCESS_KEY={0} >> ~/.bashrc\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
-        # userstr += 'echo export AWS_ACCESS_KEY_ID={0} >> /home/ubuntu/.bashrc\n'.format(str(credentials[self.PARAM_CREDS_PUBLIC]))   
-        # userstr += 'echo export AWS_SECRET_ACCESS_KEY={0} >> /home/ubuntu/.bashrc\n'.format( str(credentials[self.PARAM_CREDS_PRIVATE]))
-        # 
         userstr += 'source ~/.bashrc \n'
-        userstr += "nohup celery -A services.jobmanager.tasks worker --autoreload --loglevel=info -n {0} --workdir /home/ubuntu/cloudrunner > /home/ubuntu/cloudrunner-worker.log 2>&1 & \n".format(str(uuid.uuid4()))
-        
+        # All wokers need an alarm, but the queue head doesn't
+        skip_alarm = False
+        if self.PARAM_QUEUE_HEAD in parameters and parameters[self.PARAM_QUEUE_HEAD]:
+            skip_alarm = True
+            # Queue head, needs to have at least two cores
+            insufficient_cores = ['t1.micro', 'm1.small', 'm1.medium', 'm3.medium']
+            if instance_type in insufficient_cores:
+                instance_type = 'c3.large'
+            # Create the user that we want to use to connect to the broker
+            # and configure its permissions on the default vhost.
+            userstr += "rabbitmqctl add_user stochss ucsb\n"
+            userstr += 'rabbitmqctl set_permissions -p / stochss ".*" ".*" ".*"\n'
+        else:
+            # Update celery config file...it should have the correct IP
+            # of the Queue head node, which should already be running.
+            celery_config_filename = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "../../jobmanager/celeryconfig.py"
+            )
+            # Pass it line by line so theres no weird formatting errors from 
+            # trying to echo a multi-line file directly on the command line
+            with open(celery_config_filename, 'r') as celery_config_file:
+                lines = celery_config_file.readlines()
+                # Make sure we overwrite the file with our first write
+                config_file_path = '/home/ubuntu/cloudrunner/services/jobmanager/celeryconfig.py'
+                userstr += "echo '{0}' > {1}\n".format(lines[0], config_file_path)
+                for line in lines[1:]:
+                    userstr += "echo '{0}' >> {1}\n".format(line, config_file_path)
+        # Even the queue head gets a celery worker
+        if self.PARAM_WORKER_QUEUE in parameters:
+            userstr += "nohup celery -A services.jobmanager.tasks worker --autoreload --loglevel=info -Q {0} --workdir /home/ubuntu/cloudrunner > /home/ubuntu/cloudrunner-worker.log 2>&1 & \n".format(
+                parameters[self.PARAM_WORKER_QUEUE]
+            )
+        else:
+            userstr += "nohup celery -A services.jobmanager.tasks worker --autoreload --loglevel=info --workdir /home/ubuntu/cloudrunner > /home/ubuntu/cloudrunner-worker.log 2>&1 & \n"
         f.write(userstr)
         f.close()
         start_time = datetime.datetime.now()
@@ -418,7 +446,8 @@ class EC2Worker(BaseWorker):
                 )
                 utils.log('Creating Alarms for the instances')
                 for machineid in instance_ids:
-                    self.make_sleepy(parameters, machineid)   
+                    if not skip_alarm:
+                        self.make_sleepy(parameters, machineid)   
             return instance_ids, public_ips, private_ips
         except EC2ResponseError as exception:
             self.handle_failure(
@@ -492,7 +521,7 @@ class EC2Worker(BaseWorker):
         AgentRuntimeException Contains the input error message
         """
         utils.log(msg)
-        raise AgentRuntimeException(msg)
+        raise WorkerRuntimeException(msg)
 
 if __name__ == "__main__":
     argc = len(sys.argv)
@@ -502,8 +531,8 @@ if __name__ == "__main__":
             params_file = sys.argv[2]
             params = yaml.load(open(params_file, 'r'))
             os.system('rm -rf {0}'.format(params_file))
-            agent = EC2Agent()
-            agent.run_instances(params["count"], params, params["security_configured"])
+            worker = EC2Worker()
+            worker.run_instances(params["count"], params, params["security_configured"])
         else:
             pass
     else:

@@ -41,6 +41,8 @@ class CRConstants(object):
     PARAM_FILE_URL = "remote_file_url"
     PARAM_OUTPUT_PATH = "desired_output_path"
     PARAM_WORKER_SIZE = "worker_size"
+    PARAM_WORKER_QUEUE = "queue_name"
+    PARAM_QUEUE_HEAD = "queue_head"
     PARAM_ADMIN_TOKEN = "secret_key"
     PARAM_USER_EMAIL = "email_address"
     PARAM_USER_PASS = "password"
@@ -55,6 +57,7 @@ class CRConstants(object):
     # specific instance types in cloud_manager.py)
     WORKER_SIZE_TINY = "tiny"
     WORKER_SIZE_SMALL = "small"
+    WORKER_SIZE_MEDIUM = "medium"
     
     # Possible job states for all jobs
     JOB_STATE_RUNNING = "running"
@@ -69,6 +72,7 @@ class CRConstants(object):
     KEY_PROG_PATH = "programs_path"
     KEY_SSH_USER = "ssh_username"
     KEY_IMAGE_ID = "image_id"
+    KEY_QUEUEHEAD_IMAGE_ID = "queuehead_image_id"
     KEY_REGION = "default_region"
     KEY_PROG_YAML_PATH = "programs_yaml_path"
     # YAML file key names for program dependency file

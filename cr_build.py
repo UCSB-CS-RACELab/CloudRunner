@@ -162,7 +162,7 @@ class CRBuilder(object):
                     #      Need to make this more dynamic if possible.
                     CRConstants.PARAM_WORKER_SIZE: CRConstants.WORKER_SIZE_SMALL
                 }
-                launch_result = self.cloud_manager.launch_instances(params)
+                launch_result = self.cloud_manager.launch_instances(params, builder=True)
                 # time.sleep(5)
                 print "Finished."
                 
@@ -217,10 +217,11 @@ class CRBuilder(object):
                         keypair_path,
                         instance_ip
                     )
+                    image_id = ''
                     if should_make_image:
                         print "Creating new worker image for the '{0}' infrastructure...".format(infrastructure)
                         # __make_cloud_image() also terminates the instance
-                        self.__make_cloud_image(infrastructure, instance_id)
+                        image_id = self.__make_cloud_image(infrastructure, instance_id)
                     else:
                         print "All programs failed to build for the '{0}' infrastructure. Cleaning up...".format(infrastructure)
                         terminate_params = {
@@ -229,6 +230,7 @@ class CRBuilder(object):
                             self.cloud_manager.PARAM_INSTANCE_IDS: [instance_id],
                             self.cloud_manager.PARAM_BLOCKING: True
                         }
+                        #TODO: Uncomment this when done debugging
                         #self.cloud_manager.terminate_instances(terminate_params)
                     print "Finished."
                     continue
@@ -463,7 +465,8 @@ class CRBuilder(object):
         }
         image_creation_result = self.cloud_manager.create_image(params)
         # TODO: Delete the old image?
-        self.supported_infra[infrastructure][self.KEY_IMAGE_ID] = image_creation_result["image_id"]
+        image_id = image_creation_result["image_id"]
+        self.supported_infra[infrastructure][self.KEY_IMAGE_ID] = image_id
         self.config[self.KEY_SUPP_INFRA] = self.supported_infra
         self.__update_YAML_config()
         
@@ -474,6 +477,7 @@ class CRBuilder(object):
             self.cloud_manager.PARAM_BLOCKING: True
         }
         self.cloud_manager.terminate_instances(terminate_params)
+        return image_id
     
     def __run_build_process(self, git_URL, infrastructure, verbose=False):
         result = {}

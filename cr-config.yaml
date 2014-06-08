@@ -1,5 +1,5 @@
 available_programs: []
 supported_infrastructures:
-  aws: {default_region: us-east-1, image_id: ami-f0997f98, programs_path: /home/ubuntu/cloudrunner/programs,
+  aws: {default_region: us-east-1, image_id: ami-92fc0ffa, programs_path: /home/ubuntu/cloudrunner/programs,
     programs_yaml_path: /home/ubuntu/cloudrunner/programs_yaml, ssh_username: ubuntu}
   local: {programs_path: /Users/choruk/src/cloudrunner/programs, programs_yaml_path: /Users/choruk/src/cloudrunner/programs_yaml}

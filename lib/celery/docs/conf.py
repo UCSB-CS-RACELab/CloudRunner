@@ -42,7 +42,7 @@ extensions = ['sphinx.ext.autodoc',
 
 LINKCODE_URL = 'http://github.com/{proj}/tree/{branch}/{filename}.py'
 GITHUB_PROJECT = 'celery/celery'
-GITHUB_BRANCH = 'master'
+GITHUB_BRANCH = 'main'
 
 def linkcode_resolve(domain, info):
     if domain != 'py' or not info['module']:
@@ -62,8 +62,8 @@ templates_path = ['.templates']
 # The suffix of source filenames.
 source_suffix = '.rst'
 
-# The master toctree document.
-master_doc = 'index'
+# The main toctree document.
+main_doc = 'index'
 
 # General information about the project.
 project = u'Celery'

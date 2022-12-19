@@ -879,7 +879,7 @@ class QueryTestCase(TestCase):
         self.assertEqual(book.editor._state.db, 'other')
 
     def test_subquery(self):
-        """Make sure as_sql works with subqueries and master/slave."""
+        """Make sure as_sql works with subqueries and main/subordinate."""
         sub = Person.objects.using('other').filter(name='fff')
         qs = Book.objects.filter(editor__in=sub)
 
@@ -920,7 +920,7 @@ class QueryTestCase(TestCase):
                                   extra_arg=True)
 
 class TestRouter(object):
-    # A test router. The behaviour is vaguely master/slave, but the
+    # A test router. The behaviour is vaguely main/subordinate, but the
     # databases aren't assumed to propagate changes.
     def db_for_read(self, model, instance=None, **hints):
         if instance:
@@ -977,7 +977,7 @@ class RouterTestCase(TestCase):
     multi_db = True
 
     def setUp(self):
-        # Make the 'other' database appear to be a slave of the 'default'
+        # Make the 'other' database appear to be a subordinate of the 'default'
         self.old_routers = router.routers
         router.routers = [TestRouter()]
 
@@ -1133,7 +1133,7 @@ class RouterTestCase(TestCase):
         try:
             dive.editor = marty
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments of original objects haven't changed...
         self.assertEquals(marty._state.db, 'default')
@@ -1151,7 +1151,7 @@ class RouterTestCase(TestCase):
         except Book.DoesNotExist:
             self.fail('Source database should have a copy of saved object')
 
-        # This isn't a real master-slave database, so restore the original from other
+        # This isn't a real main-subordinate database, so restore the original from other
         dive = Book.objects.using('other').get(title='Dive into Python')
         self.assertEquals(dive._state.db, 'other')
 
@@ -1159,7 +1159,7 @@ class RouterTestCase(TestCase):
         try:
             marty.edited = [pro, dive]
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Assignment implies a save, so database assignments of original objects have changed...
         self.assertEquals(marty._state.db, 'default')
@@ -1173,7 +1173,7 @@ class RouterTestCase(TestCase):
         except Book.DoesNotExist:
             self.fail('Source database should have a copy of saved object')
 
-        # This isn't a real master-slave database, so restore the original from other
+        # This isn't a real main-subordinate database, so restore the original from other
         dive = Book.objects.using('other').get(title='Dive into Python')
         self.assertEquals(dive._state.db, 'other')
 
@@ -1181,7 +1181,7 @@ class RouterTestCase(TestCase):
         try:
             marty.edited.add(dive)
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Add implies a save, so database assignments of original objects have changed...
         self.assertEquals(marty._state.db, 'default')
@@ -1195,7 +1195,7 @@ class RouterTestCase(TestCase):
         except Book.DoesNotExist:
             self.fail('Source database should have a copy of saved object')
 
-        # This isn't a real master-slave database, so restore the original from other
+        # This isn't a real main-subordinate database, so restore the original from other
         dive = Book.objects.using('other').get(title='Dive into Python')
 
         # If you assign a FK object when the base object hasn't
@@ -1249,7 +1249,7 @@ class RouterTestCase(TestCase):
         mark = Person.objects.using('default').create(pk=2, name="Mark Pilgrim")
 
         # Now save back onto the usual databse.
-        # This simulates master/slave - the objects exist on both database,
+        # This simulates main/subordinate - the objects exist on both database,
         # but the _state.db is as it is for all other tests.
         pro.save(using='default')
         marty.save(using='default')
@@ -1266,7 +1266,7 @@ class RouterTestCase(TestCase):
         try:
             marty.book_set = [pro, dive]
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments don't change
         self.assertEquals(marty._state.db, 'default')
@@ -1285,7 +1285,7 @@ class RouterTestCase(TestCase):
         try:
             marty.book_set.add(dive)
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments don't change
         self.assertEquals(marty._state.db, 'default')
@@ -1304,7 +1304,7 @@ class RouterTestCase(TestCase):
         try:
             dive.authors = [mark, marty]
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments don't change
         self.assertEquals(marty._state.db, 'default')
@@ -1326,7 +1326,7 @@ class RouterTestCase(TestCase):
         try:
             dive.authors.add(marty)
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments don't change
         self.assertEquals(marty._state.db, 'default')
@@ -1364,7 +1364,7 @@ class RouterTestCase(TestCase):
         try:
             bob.userprofile = alice_profile
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments of original objects haven't changed...
         self.assertEquals(alice._state.db, 'default')
@@ -1395,7 +1395,7 @@ class RouterTestCase(TestCase):
         try:
             review1.content_object = dive
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments of original objects haven't changed...
         self.assertEquals(pro._state.db, 'default')
@@ -1414,7 +1414,7 @@ class RouterTestCase(TestCase):
         except Book.DoesNotExist:
             self.fail('Source database should have a copy of saved object')
 
-        # This isn't a real master-slave database, so restore the original from other
+        # This isn't a real main-subordinate database, so restore the original from other
         dive = Book.objects.using('other').get(title='Dive into Python')
         self.assertEquals(dive._state.db, 'other')
 
@@ -1422,7 +1422,7 @@ class RouterTestCase(TestCase):
         try:
             dive.reviews.add(review1)
         except ValueError:
-            self.fail("Assignment across master/slave databases with a common source should be ok")
+            self.fail("Assignment across main/subordinate databases with a common source should be ok")
 
         # Database assignments of original objects haven't changed...
         self.assertEquals(pro._state.db, 'default')
@@ -1498,7 +1498,7 @@ class RouterTestCase(TestCase):
         self.assertEquals(pro.reviews.db_manager('default').all().db, 'default')
 
     def test_subquery(self):
-        """Make sure as_sql works with subqueries and master/slave."""
+        """Make sure as_sql works with subqueries and main/subordinate."""
         # Create a book and author on the other database
 
         mark = Person.objects.using('other').create(name="Mark Pilgrim")
@@ -1521,7 +1521,7 @@ class AuthTestCase(TestCase):
     multi_db = True
 
     def setUp(self):
-        # Make the 'other' database appear to be a slave of the 'default'
+        # Make the 'other' database appear to be a subordinate of the 'default'
         self.old_routers = router.routers
         router.routers = [AuthRouter()]
 

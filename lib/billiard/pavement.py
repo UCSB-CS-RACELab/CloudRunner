@@ -44,7 +44,7 @@ def ghdocs(options):
             cp -r %s/* .    && \
             git commit . -m 'Rendered documentation for Github Pages.' && \
             git push origin gh-pages && \
-            git checkout master" % builtdocs)
+            git checkout main" % builtdocs)
 
 
 @task

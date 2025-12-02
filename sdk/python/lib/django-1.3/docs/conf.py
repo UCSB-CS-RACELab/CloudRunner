@@ -37,8 +37,8 @@ source_suffix = '.txt'
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
-# The master toctree document.
-master_doc = 'contents'
+# The main toctree document.
+main_doc = 'contents'
 
 # General substitutions.
 project = 'Django'
